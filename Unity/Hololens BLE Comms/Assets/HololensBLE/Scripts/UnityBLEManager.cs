@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using Recreate.Hololens.BluetoothLE;
@@ -9,7 +8,7 @@ namespace HololensBLE.Scripts
 {
     public class UnityBLEManager : MonoBehaviour
     {
-        private UWPBLEManager Bluetooth = new UWPBLEManager();
+        //private UWPBLEManager Bluetooth = new UWPBLEManager();
 
         public Button Connect;
         public Button PrintServices;

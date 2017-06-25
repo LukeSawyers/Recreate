@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 
 #if(UNITY_WSA_10_0 && !UNITY_EDITOR)
+using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
@@ -27,7 +27,7 @@ namespace Recreate.Hololens.BluetoothLE
     public class GattDevice
     {
 
-        #region Static
+    #region Static
 
         /// <summary>
         /// Event use to sent GattDevice object when they are required to be retrieved
@@ -198,9 +198,9 @@ namespace Recreate.Hololens.BluetoothLE
             return d;
         }
 
-        #endregion
+    #endregion
 
-        #region Instance
+    #region Instance
 
         /// <summary>
         /// List of all the services associated with this device
@@ -272,7 +272,7 @@ namespace Recreate.Hololens.BluetoothLE
             device = Device;  
         }
 
-        #endregion
+    #endregion
 
     }
 
@@ -282,7 +282,7 @@ namespace Recreate.Hololens.BluetoothLE
     public class GattService
     {
 
-        #region Static
+    #region Static
 
         /// <summary>
         /// Creates a list of services given a GattDevice
@@ -315,9 +315,9 @@ namespace Recreate.Hololens.BluetoothLE
             return s;
         }
 
-        #endregion
+    #endregion
 
-        #region Instance
+    #region Instance
 
         public List<GattCharacteristic> characteristics;
 
@@ -345,7 +345,7 @@ namespace Recreate.Hololens.BluetoothLE
             _service = Service;
         }
 
-        #endregion
+    #endregion
 
     }
 
@@ -354,7 +354,7 @@ namespace Recreate.Hololens.BluetoothLE
     /// </summary>
     public class GattCharacteristic
     {
-        #region Static
+    #region Static
 
         /// <summary>
         /// Creates a list of services given a GattDevice
@@ -375,9 +375,9 @@ namespace Recreate.Hololens.BluetoothLE
 
         }
 
-        #endregion
+    #endregion
 
-        #region Instance
+    #region Instance
 
         private Windows.Devices.Bluetooth.GenericAttributeProfile.GattCharacteristic _characteristic;
         public Windows.Devices.Bluetooth.GenericAttributeProfile.GattCharacteristic characteristic
@@ -403,7 +403,7 @@ namespace Recreate.Hololens.BluetoothLE
             _characteristic = Characteristic;
         }
 
-        #endregion
+    #endregion
 
     }
 
@@ -481,27 +481,145 @@ namespace Recreate.Hololens.BluetoothLE
         */
     }
 #else
+
     /// <summary>
-    /// UWP Version of the class overriding all the base methods with actual functionality
+    /// Wrapper Class Representing a Gatt Device
     /// </summary>
-    public class UWPBLEManager : IBLEManager
+    public class GattDevice
     {
-        private Guid MockID = new Guid("0a4ad22f-7992-4e99-9ee4-8d37630eb27a");
+        
+        #region Static
 
-        public bool Connect()
+        /// <summary>
+        /// Event use to sent GattDevice object when they are required to be retrieved
+        /// </summary>
+        public static event SendGattDeviceList OnDevicesAcquired;
+
+        /// <summary>
+        /// Find any BLE device with a specified name
+        /// </summary>
+        public static void DevicesWithName(string name)
         {
-            return false;
+
         }
 
-        public List<Guid> GetServicesGUID()
+        /// <summary>
+        /// Gets All Connected Devices
+        /// </summary>
+        /// <param name="name"></param>
+        public static void AllConnectedDevices()
         {
-            return new List<Guid> { MockID };
+
         }
 
-        public bool ServiceExists(Guid guid)
+
+        /// <summary>
+        /// Gets all devices based on their connection state. Takes much longer to find unconnected devices than connected devices
+        /// </summary>
+        /// <param name="Connected"></param>
+        public static void DevicesWithConnectionStatus(bool Connected)
         {
-            return this.GetServicesGUID().Contains(guid);
+
         }
+
+        /// <summary>
+        /// Gets all devices based on their pairing state. Takes much longer to find unpaired devices than paired devices
+        /// </summary>
+        /// <param name="Connected">True to look for paired devices, false to look for unpaired devices</param>
+        public static void DevicesWithPairingStatus(bool Paired)
+        {
+
+        }
+
+        /// <summary>
+        /// Asynchronously finds all connected devices that have services with the provided GUID
+        /// Does not return the devices, this is sent using the OnDevicesAcquired event
+        /// </summary>
+        /// <param name="guid"></param>
+        public static void ConnectedDevicesWithServiceGuid(Guid guid)
+        {
+
+        }
+
+
+        public void Pair()
+        {
+            
+        }
+
+        #endregion
+
+        #region Instance
+
+        public List<GattService> services;
+
+        public string Name { get; internal set; }
+
+        #endregion
+
+    }
+
+    /// <summary>
+    /// Wrapper Class Representing a Gatt Service
+    /// </summary>
+    public class GattService
+    {
+
+        #region Static
+
+        /// <summary>
+        /// Creates a list of services given a GattDevice
+        /// </summary>
+        /// <param name="device"></param>
+        /// <returns></returns>
+        public static List<GattService> GetServices(GattDevice device) { return null; }
+
+        #endregion
+
+        #region Instance
+
+        public List<GattCharacteristic> characteristics;
+
+        /// <summary>
+        /// Returns the uuid of this service
+        /// </summary>
+        public Guid UUID
+        {
+            get { return new Guid(); }
+        }
+
+        #endregion
+
+    }
+
+    /// <summary>
+    /// Wrapper Class Representing a Gatt Characteristic
+    /// </summary>
+    public class GattCharacteristic
+    {
+        #region Static
+
+        /// <summary>
+        /// Creates a list of services given a GattDevice
+        /// </summary>
+        /// <param name="device"></param>
+        /// <returns></returns>
+        public static List<GattCharacteristic> GetCharacteristics(GattService service) { return null; }
+
+        #endregion
+
+        #region Instance
+
+        /// <summary>
+        /// Returns the uuid of this characteristic
+        /// </summary>
+        public Guid UUID
+        {
+            get { return new Guid(); }
+        }
+
+        #endregion
+
     }
 
 #endif
