@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Windows.ApplicationModel.Core;
 
-#if(UNITY_WSA_10_0 && !UNITY_EDITOR)
+#if (UNITY_WSA_10_0 && !UNITY_EDITOR)
 using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
+using Windows.UI.Core;
 #endif
 
 namespace Recreate.Hololens.BluetoothLE
@@ -14,17 +16,264 @@ namespace Recreate.Hololens.BluetoothLE
     #region Delegates
 
     public delegate void SendGattDeviceList(List<GattDevice> devices);
-    public delegate void SendPairingResult(GattDevice device);
+    public delegate void SendGattDevice(GattDevice device);
+    public delegate void SendEmpty();
+    public delegate void SendDeviceUpdate(Dictionary<string, GattInformation> GattInformationDictionary, GattDeviceManager.DeviceUpdate UpdateType);
 
     #endregion
 
 
 #if (UNITY_WSA_10_0 && !UNITY_EDITOR)
 
+
+
     /// <summary>
-    /// Wrapper Class Representing a Gatt Device
+    /// Static Class responsible for making GattDevices
     /// </summary>
-    public class GattDevice
+    public class GattDeviceManager
+    {
+        #region DeviceWatcher
+
+        private static DeviceWatcher watcher;
+
+        /// <summary>
+        /// Dictionary of existing GattInformation objects, indexed by their ID
+        /// </summary>
+        private static Dictionary<string,GattInformation> InformationCollection = new Dictionary<string, GattInformation>();
+
+        /// <summary>
+        /// Event for when the watcher's enumeration completes
+        /// </summary>
+        public static event SendEmpty OnEnumerationCompleted;
+
+        /// <summary>
+        /// Event for when the watcher is stopped
+        /// </summary>
+        public static event SendEmpty OnWatcherStopped;
+
+        /// <summary>
+        /// Enumerates the possible ways a device can be updated
+        /// </summary>
+        public enum DeviceUpdate { Added, Updated, Removed };
+        
+            /// <summary>
+        /// Event for when the watcher is stopped
+        /// </summary>
+        public static event SendDeviceUpdate OnDevicesUpdated;
+
+        /// <summary>
+        /// Starts the device watcher
+        /// </summary>
+        public static void StartWatcher()
+        {
+            // Additional properties we would like about the device.
+            string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected" };
+
+            // BT_Code: Currently Bluetooth APIs don't provide a selector to get ALL devices that are both paired and non-paired.
+            watcher =
+                    DeviceInformation.CreateWatcher(
+                        "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")",
+                        requestedProperties,
+                        DeviceInformationKind.AssociationEndpoint);
+
+            // Register event handlers before starting the watcher.
+            watcher.Added += Watcher_Added;
+            watcher.Updated += Watcher_Updated;
+            watcher.Removed += Watcher_Removed;
+            watcher.EnumerationCompleted += Watcher_EnumerationCompleted;
+            watcher.Stopped += Watcher_Stopped;
+
+            InformationCollection.Clear();
+
+            // Start the watcher.
+            watcher.Start();
+        }
+
+        /// <summary>
+        /// Stops the device watcher from enumerating
+        /// </summary>
+        public static void StopWatcher()
+        {
+            // Register event handlers before starting the watcher.
+            watcher.Added -= Watcher_Added;
+            watcher.Updated -= Watcher_Updated;
+            watcher.Removed -= Watcher_Removed;
+            watcher.EnumerationCompleted -= Watcher_EnumerationCompleted;
+            watcher.Stopped -= Watcher_Stopped;
+
+            // Start the watcher.
+            watcher.Stop();
+        }
+
+        /// <summary>
+        /// Raises an event when the watcher has been stopped
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        private static async void Watcher_Stopped(DeviceWatcher sender, object args)
+        {
+            // We must update the collection on the UI thread
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == watcher)
+                {
+                    OnWatcherStopped?.Invoke();
+                }
+            });
+        }
+
+        /// <summary>
+        /// Raises an event when device enumeration is completed
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        private static async void Watcher_EnumerationCompleted(DeviceWatcher sender, object args)
+        {
+            // We must update the collection on the UI thread
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == watcher)
+                {
+                    // raise an event to indicate this
+                    OnEnumerationCompleted?.Invoke();
+                }
+            });
+        }
+
+        /// <summary>
+        /// When a device is removed, remove it from the collection
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="deviceInfoUpdate"></param>
+        private static async void Watcher_Removed(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+        {
+            // We must update the collection on the UI thread
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == watcher)
+                {
+                    // if the entry exists in the dictionary, 
+                    if (InformationCollection.ContainsKey(deviceInfoUpdate.Id))
+                    {
+                        InformationCollection.Remove(deviceInfoUpdate.Id);
+                    }
+                }
+            });
+
+            OnDevicesUpdated?.Invoke(InformationCollection, DeviceUpdate.Removed);
+
+        }
+
+        /// <summary>
+        /// When a device is updated, modify its entry in the collection
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="deviceInfoUpdate"></param>
+        private static async void Watcher_Updated(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+        {
+            // We must update the collection on the UI thread
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == watcher)
+                {
+                    // if the entry exists in the dictionary
+                    if (InformationCollection.ContainsKey(deviceInfoUpdate.Id))
+                    {
+                        InformationCollection[deviceInfoUpdate.Id].Update(deviceInfoUpdate);
+                    }
+                }
+            });
+
+            OnDevicesUpdated?.Invoke(InformationCollection, DeviceUpdate.Updated);
+
+        }
+
+        /// <summary>
+        /// When a new device is added to the watcher, add it to the collection
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="deviceInfo"></param>
+        private static async void Watcher_Added(DeviceWatcher sender, DeviceInformation deviceInfo)
+        {
+            // We must update the collection on the UI thread
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == watcher)
+                {
+                    // if the entry doesnt already exist in the dictionary, 
+                    if (!InformationCollection.ContainsKey(deviceInfo.Id))
+                    {
+                        InformationCollection.Add(deviceInfo.Id, new GattInformation(deviceInfo));
+                    }
+                }
+            });
+
+            OnDevicesUpdated?.Invoke(InformationCollection, DeviceUpdate.Added);
+
+        }
+
+        #endregion
+
+        #region Device Factory
+
+        public static GattDevice GetDevice(GattInformation information)
+        {
+            GattDevice dev = null;
+
+            // We must update the collection on the UI thread
+            CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+            {
+                BluetoothLEDevice device = await BluetoothLEDevice.FromIdAsync(information.Id);
+                dev = GattDevice.Create(device);
+
+            }).GetResults();
+
+            return dev;
+        }
+
+        #endregion
+
+    }
+    
+
+    /// <summary>
+    /// Wrapper for the DeviceInformation class
+    /// </summary>
+    public class GattInformation
+    {
+        /// <summary>
+        /// Information class
+        /// </summary>
+        private DeviceInformation information;
+
+        internal GattInformation(DeviceInformation Information)
+        {
+            information = Information;
+        }
+
+        public string Id { get { return information.Id; } }
+
+        public string Name { get { return information.Name; } }
+
+        /// <summary>
+        /// Update this objects device info
+        /// </summary>
+        /// <param name="deviceInfoUpdate"></param>
+        internal void Update(DeviceInformationUpdate deviceInfoUpdate)
+        {
+            information.Update(deviceInfoUpdate);
+        }
+    }
+
+/// <summary>
+/// Wrapper Class Representing a Gatt Device
+/// </summary>
+public class GattDevice
     {
 
     #region Static
@@ -121,37 +370,34 @@ namespace Recreate.Hololens.BluetoothLE
         /// Gets all devices based on their pairing state. Takes much longer to find unpaired devices than paired devices
         /// </summary>
         /// <param name="Connected">True to look for paired devices, false to look for unpaired devices</param>
-        public static void DevicesWithPairingStatus(bool Paired) { DevicesWithPairingStatusAsync(Paired); }
-        private async static void DevicesWithPairingStatusAsync(bool Paired)
+        public static void DevicesWithPairingStatus(bool Paired)
         {
-            List<GattDevice> returnDevices = new List<GattDevice>();
-            string filter = BluetoothLEDevice.GetDeviceSelectorFromPairingState(Paired);
-            DeviceInformationCollection infos = await DeviceInformation.FindAllAsync(filter);
-            if (infos.Count > 0)
-            {
-                Debug.Log("Found " + infos.Count + " Devices");
-                foreach (DeviceInformation info in infos)
-                {
-                    string deviceID = info.Id;
-                    Debug.Log("Device Name: " + info.Name);
-                    try
-                    {
-                        BluetoothLEDevice device = await BluetoothLEDevice.FromIdAsync(deviceID);
-                        GattDevice d = GattDevice.Create(device);
-                        returnDevices.Add(d);
-                    }
-                    catch{ }
-                    
-                }
-            }
+            CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+               {
+                   List<GattDevice> returnDevices = new List<GattDevice>();
+                   string filter = BluetoothLEDevice.GetDeviceSelectorFromPairingState(Paired);
+                   DeviceInformationCollection infos = await DeviceInformation.FindAllAsync(filter);
+                   if (infos.Count > 0)
+                   {
+                       Debug.Log("Found " + infos.Count + " Devices");
+                       foreach (DeviceInformation info in infos)
+                       {
+                           string deviceID = info.Id;
+                           Debug.Log("Device Name: " + info.Name);
+                           try
+                           {
+                               BluetoothLEDevice device = await BluetoothLEDevice.FromIdAsync(deviceID);
+                               GattDevice d = GattDevice.Create(device);
+                               returnDevices.Add(d);
+                           }
+                           catch { }
 
-            OnDevicesAcquired?.Invoke(returnDevices);
+                       }
+                   }
 
-            /*Debug.Log("Found " + infos.Count + " Devices");
-            foreach (DeviceInformation info in infos)
-            {
-                Debug.Log("Device Name: " + info.Name);
-            }*/
+                   OnDevicesAcquired?.Invoke(returnDevices);
+               }
+            );
         }
 
         /// <summary>
@@ -191,7 +437,7 @@ namespace Recreate.Hololens.BluetoothLE
         /// </summary>
         /// <param name="device"></param>
         /// <returns></returns>
-        private static GattDevice Create(BluetoothLEDevice device)
+        internal static GattDevice Create(BluetoothLEDevice device)
         {
             GattDevice d = new GattDevice(device);
             d.services = GattService.GetServices(d);

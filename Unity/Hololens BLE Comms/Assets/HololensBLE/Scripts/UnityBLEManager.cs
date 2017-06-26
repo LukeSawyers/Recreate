@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Recreate.Hololens.BluetoothLE;
+using System.Diagnostics;
 
 namespace HololensBLE.Scripts
 {
@@ -24,26 +25,81 @@ namespace HololensBLE.Scripts
             PrintDoesServiceExist.onClick.AddListener(PrintDoesDeviceExistClicked);
         }
 
+        volatile bool deviceUpdated = false;
+        volatile string DebugString = "";
+
+        private void Update()
+        {
+            if (deviceUpdated)
+            {
+                System.Diagnostics.Debug.WriteLine(PrintServices);
+                deviceUpdated = false;
+            }
+        }
+
         private void ConnectClicked()
         {
+            GattDeviceManager.OnDevicesUpdated += GattDeviceManager_OnDevicesUpdated;
+            GattDeviceManager.StartWatcher();
+            System.Diagnostics.Debug.WriteLine("Started Watcher");
+        }
+
+        private void GattDeviceManager_OnDevicesUpdated(Dictionary<string, GattInformation> GattInformationDictionary, GattDeviceManager.DeviceUpdate UpdateType)
+        {
+            DebugString = "";
+
+            switch (UpdateType)
+            {
+                case GattDeviceManager.DeviceUpdate.Added:
+                    DebugString += "Device Added";
+                    break;
+                case GattDeviceManager.DeviceUpdate.Removed:
+                    DebugString += "Device Removed";
+                    break;
+                case GattDeviceManager.DeviceUpdate.Updated:
+                    DebugString += "Device Updated";
+                    break;
+            }
+
+            DebugString += Environment.NewLine + "Devices:" + Environment.NewLine;
+
+            foreach(GattInformation info in GattInformationDictionary.Values)
+            {
+                DebugString += "   " + info.Name + Environment.NewLine;
+            }
+            deviceUpdated = true;
             
         }
-        
+
         private void PrintServicesClicked()
         {
+            /*
             GattDevice.OnDevicesAcquired += GattDevice_OnDevicesAcquired;
             GattDevice.DevicesWithName("Test Device");
+            */
+
+            GattDeviceManager.StopWatcher();
+            GattDeviceManager.OnDevicesUpdated -= GattDeviceManager_OnDevicesUpdated;
+            System.Diagnostics.Debug.WriteLine("Stop Watcher");
+
         }
 
         private void PrintDoesDeviceExistClicked()
         {
-            /*string name = "Test Device";
+            /*
+            string name = "Test Device";
             bool[] result = Bluetooth.DeviceExistsAsync(serviceGUID).Result;
             Debug.Log("Device " + name.ToString() +": " + (result[0] ? "Exists!" : "Doesn't Exist"));
-            Debug.Log(result[1] ? "Successfully Retrieved GATT Device" : "Could not get GATT device");*/
+            Debug.Log(result[1] ? "Successfully Retrieved GATT Device" : "Could not get GATT device");
+            */
 
+            /*
             GattDevice.OnDevicesAcquired += GattDevice_OnDevicesAcquired;
             GattDevice.ConnectedDevicesWithServiceGuid(serviceGUID);
+            */
+
+
+
         }
 
         private void GattDevice_OnDevicesAcquired(List<GattDevice> devices)
@@ -62,7 +118,7 @@ namespace HololensBLE.Scripts
                 }
             }
             S += Environment.NewLine;
-            Debug.Log(S);
+            System.Diagnostics.Debug.WriteLine(S);
             GattDevice.OnDevicesAcquired -= GattDevice_OnDevicesAcquired;
         }
     }
