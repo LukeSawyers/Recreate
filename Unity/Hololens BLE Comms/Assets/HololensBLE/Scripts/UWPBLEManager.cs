@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Windows.ApplicationModel.Core;
 
 #if (UNITY_WSA_10_0 && !UNITY_EDITOR)
 using System.Threading.Tasks;
+using Windows.ApplicationModel.Core;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
@@ -18,9 +18,14 @@ namespace Recreate.Hololens.BluetoothLE
     public delegate void SendGattDeviceList(List<GattDevice> devices);
     public delegate void SendGattDevice(GattDevice device);
     public delegate void SendEmpty();
-    public delegate void SendDeviceUpdate(Dictionary<string, GattInformation> GattInformationDictionary, GattDeviceManager.DeviceUpdate UpdateType);
+    public delegate void SendDeviceUpdate(Dictionary<string, GattInformation> GattInformationDictionary, DeviceUpdate UpdateType);
 
     #endregion
+
+    /// <summary>
+    /// Enumerates the possible ways a device can be updated
+    /// </summary>
+    public enum DeviceUpdate { Added, Updated, Removed };
 
 
 #if (UNITY_WSA_10_0 && !UNITY_EDITOR)
@@ -32,7 +37,7 @@ namespace Recreate.Hololens.BluetoothLE
     /// </summary>
     public class GattDeviceManager
     {
-        #region DeviceWatcher
+    #region DeviceWatcher
 
         private static DeviceWatcher watcher;
 
@@ -52,11 +57,6 @@ namespace Recreate.Hololens.BluetoothLE
         public static event SendEmpty OnWatcherStopped;
 
         /// <summary>
-        /// Enumerates the possible ways a device can be updated
-        /// </summary>
-        public enum DeviceUpdate { Added, Updated, Removed };
-        
-            /// <summary>
         /// Event for when the watcher is stopped
         /// </summary>
         public static event SendDeviceUpdate OnDevicesUpdated;
@@ -217,9 +217,9 @@ namespace Recreate.Hololens.BluetoothLE
 
         }
 
-        #endregion
+    #endregion
 
-        #region Device Factory
+    #region Device Factory
 
         public static GattDevice GetDevice(GattInformation information)
         {
@@ -236,7 +236,7 @@ namespace Recreate.Hololens.BluetoothLE
             return dev;
         }
 
-        #endregion
+    #endregion
 
     }
     
@@ -727,6 +727,26 @@ public class GattDevice
         */
     }
 #else
+
+
+
+    /// <summary>
+    /// Static manager class;
+    /// </summary>
+    public static class GattDeviceManager
+    {
+        public static event SendDeviceUpdate OnDevicesUpdated;
+        public static void StartWatcher() { }
+        public static void StopWatcher() { }
+    }
+
+    /// <summary>
+    /// Wrapper representing Device Information
+    /// </summary>
+    public class GattInformation
+    {
+        public string Name { get; internal set; }
+    }
 
     /// <summary>
     /// Wrapper Class Representing a Gatt Device

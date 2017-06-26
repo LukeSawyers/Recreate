@@ -11,67 +11,72 @@ namespace HololensBLE.Scripts
     {
         //private UWPBLEManager Bluetooth = new UWPBLEManager();
 
-        public Button Connect;
-        public Button PrintServices;
-        public Button PrintDoesServiceExist;
+        public Button Button1;
+        public Button Button2;
+        public Button Button3;
+        public Button Button4;
+        public Button Button5;
+        public Text OutputBox;
 
         Guid serviceGUID = new Guid("00112233-4455-6677-8899-aabbccddeeff");
         
         //fa477446-c83b-4e1a-b8f1-0acd4d3e7dbb
         private void Start()
         {
-            Connect.onClick.AddListener(ConnectClicked);
-            PrintServices.onClick.AddListener(PrintServicesClicked);
-            PrintDoesServiceExist.onClick.AddListener(PrintDoesDeviceExistClicked);
+            Button1.onClick.AddListener(Button1Clicked);
+            Button2.onClick.AddListener(Button2Clicked);
+            Button3.onClick.AddListener(Button3Clicked);
+            Button4.onClick.AddListener(Button4Clicked);
+            Button5.onClick.AddListener(Button5Clicked);
         }
 
         volatile bool deviceUpdated = false;
-        volatile string DebugString = "";
+        volatile string OutString = "";
 
         private void Update()
         {
             if (deviceUpdated)
             {
-                System.Diagnostics.Debug.WriteLine(PrintServices);
+                OutputBox.text = OutString;
                 deviceUpdated = false;
             }
         }
 
-        private void ConnectClicked()
+        private void Button1Clicked()
         {
             GattDeviceManager.OnDevicesUpdated += GattDeviceManager_OnDevicesUpdated;
             GattDeviceManager.StartWatcher();
             System.Diagnostics.Debug.WriteLine("Started Watcher");
         }
 
-        private void GattDeviceManager_OnDevicesUpdated(Dictionary<string, GattInformation> GattInformationDictionary, GattDeviceManager.DeviceUpdate UpdateType)
+        private void GattDeviceManager_OnDevicesUpdated(Dictionary<string, GattInformation> GattInformationDictionary, DeviceUpdate UpdateType)
         {
-            DebugString = "";
+            OutString = "";
 
             switch (UpdateType)
             {
-                case GattDeviceManager.DeviceUpdate.Added:
-                    DebugString += "Device Added";
+                case DeviceUpdate.Added:
+                    OutString += "Device Added";
                     break;
-                case GattDeviceManager.DeviceUpdate.Removed:
-                    DebugString += "Device Removed";
+                case DeviceUpdate.Removed:
+                    OutString += "Device Removed";
                     break;
-                case GattDeviceManager.DeviceUpdate.Updated:
-                    DebugString += "Device Updated";
+                case DeviceUpdate.Updated:
+                    OutString += "Device Updated";
                     break;
             }
 
-            DebugString += Environment.NewLine + "Devices:" + Environment.NewLine;
+            OutString += Environment.NewLine + "Devices:" + Environment.NewLine;
 
             foreach(GattInformation info in GattInformationDictionary.Values)
             {
-                DebugString += "   " + info.Name + Environment.NewLine;
+                OutString += "   " + info.Name + Environment.NewLine;
             }
             deviceUpdated = true;
             
         }
 
-        private void PrintServicesClicked()
+        private void Button2Clicked()
         {
             /*
             GattDevice.OnDevicesAcquired += GattDevice_OnDevicesAcquired;
@@ -84,7 +89,7 @@ namespace HololensBLE.Scripts
 
         }
 
-        private void PrintDoesDeviceExistClicked()
+        private void Button3Clicked()
         {
             /*
             string name = "Test Device";
@@ -98,7 +103,15 @@ namespace HololensBLE.Scripts
             GattDevice.ConnectedDevicesWithServiceGuid(serviceGUID);
             */
 
+        }
 
+        private void Button4Clicked()
+        {
+
+        }
+         
+        private void Button5Clicked()
+        {
 
         }
 
