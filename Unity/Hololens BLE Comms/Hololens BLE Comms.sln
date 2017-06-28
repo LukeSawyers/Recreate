@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2017
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hololens BLE Comms", "Hololens BLE Comms.csproj", "{03CDD956-F785-604C-CA47-0A50C5A50CFF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hololens BLE Comms.Editor", "Hololens BLE Comms.Editor.csproj", "{F11CBAD4-14BC-3448-1676-69FB7133A0AE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{03CDD956-F785-604C-CA47-0A50C5A50CFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03CDD956-F785-604C-CA47-0A50C5A50CFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03CDD956-F785-604C-CA47-0A50C5A50CFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F11CBAD4-14BC-3448-1676-69FB7133A0AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F11CBAD4-14BC-3448-1676-69FB7133A0AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F11CBAD4-14BC-3448-1676-69FB7133A0AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F11CBAD4-14BC-3448-1676-69FB7133A0AE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

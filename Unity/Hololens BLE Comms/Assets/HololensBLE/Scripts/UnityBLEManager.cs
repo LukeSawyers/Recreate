@@ -19,7 +19,10 @@ namespace HololensBLE.Scripts
         public Text OutputBox;
 
         Guid serviceGUID = new Guid("00112233-4455-6677-8899-aabbccddeeff");
-        
+
+        Dictionary<string, GattInformation> GattInformations = new Dictionary<string, GattInformation>();
+        List<GattInformation> MyDevices = new List<GattInformation>();
+
         //fa477446-c83b-4e1a-b8f1-0acd4d3e7dbb
         private void Start()
         {
@@ -70,9 +73,12 @@ namespace HololensBLE.Scripts
 
             foreach(GattInformation info in GattInformationDictionary.Values)
             {
-                OutString += "   " + info.Name + Environment.NewLine;
+                OutString += "Name: " + info.Name + " - Paired: " + info.Pairing + " - Can Pair: " + info.CanPair + Environment.NewLine;
             }
+
+            GattInformations = GattInformationDictionary;
             deviceUpdated = true;
+
             
         }
 
@@ -102,17 +108,43 @@ namespace HololensBLE.Scripts
             GattDevice.OnDevicesAcquired += GattDevice_OnDevicesAcquired;
             GattDevice.ConnectedDevicesWithServiceGuid(serviceGUID);
             */
+            OutString = Environment.NewLine + "Devices:" + Environment.NewLine;
+
+            MyDevices.Clear();
+            foreach(GattInformation info in GattInformations.Values)
+            {
+                if (info.Name == "Adafruit Bluefruit LE")
+                {
+                    MyDevices.Add(info);
+                    OutString += "Name: " + info.Name + " - Paired: " + info.Pairing + " - Can Pair: " + info.CanPair + Environment.NewLine;
+                }
+                
+            }
+            deviceUpdated = true;
 
         }
 
         private void Button4Clicked()
         {
-
+            if(GattInformations.Count > 0)
+            {
+                MyDevices[0].Pair();
+            }
         }
          
         private void Button5Clicked()
         {
+            if (GattInformations.Count > 0)
+            {
+                GattDeviceManager.OnDeviceCreated += GattDeviceManager_OnDeviceCreated;
+                GattDeviceManager.GetDevice(MyDevices[0]);
+            }
+        }
 
+        private void GattDeviceManager_OnDeviceCreated(GattDevice device)
+        {
+            OutString = "Connected to device " + device.Name;
+            deviceUpdated = true;
         }
 
         private void GattDevice_OnDevicesAcquired(List<GattDevice> devices)

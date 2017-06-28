@@ -18,11 +18,12 @@ namespace Recreate.Hololens.BluetoothLE
     public delegate void SendGattDeviceList(List<GattDevice> devices);
     public delegate void SendGattDevice(GattDevice device);
     public delegate void SendEmpty();
+    public delegate void SendGattInformation(GattInformation info);
     public delegate void SendDeviceUpdate(Dictionary<string, GattInformation> GattInformationDictionary, DeviceUpdate UpdateType);
 
     #endregion
 
-    /// <summary>
+    /// <summary>W
     /// Enumerates the possible ways a device can be updated
     /// </summary>
     public enum DeviceUpdate { Added, Updated, Removed };
@@ -37,6 +38,8 @@ namespace Recreate.Hololens.BluetoothLE
     /// </summary>
     public class GattDeviceManager
     {
+        
+
     #region DeviceWatcher
 
         private static DeviceWatcher watcher;
@@ -217,23 +220,36 @@ namespace Recreate.Hololens.BluetoothLE
 
         }
 
-    #endregion
+        #endregion
 
-    #region Device Factory
+        #region Device Factory
 
-        public static GattDevice GetDevice(GattInformation information)
+        public static event SendGattDevice OnDeviceCreated;
+
+        public static void GetDevice(GattInformation information)
+        {
+
+            GetDeviceAsync(information);
+
+
+        }
+
+        private static async void GetDeviceAsync(GattInformation info)
         {
             GattDevice dev = null;
 
             // We must update the collection on the UI thread
-            CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
             {
-                BluetoothLEDevice device = await BluetoothLEDevice.FromIdAsync(information.Id);
+                BluetoothLEDevice device = await BluetoothLEDevice.FromIdAsync(info.Id);
                 dev = GattDevice.Create(device);
 
-            }).GetResults();
+            });
 
-            return dev;
+            if(dev != null)
+            {
+                OnDeviceCreated?.Invoke(dev);
+            }
         }
 
     #endregion
@@ -251,6 +267,8 @@ namespace Recreate.Hololens.BluetoothLE
         /// </summary>
         private DeviceInformation information;
 
+        public event SendGattInformation OnDevicePaired;
+
         internal GattInformation(DeviceInformation Information)
         {
             information = Information;
@@ -260,6 +278,10 @@ namespace Recreate.Hololens.BluetoothLE
 
         public string Name { get { return information.Name; } }
 
+        public bool Pairing { get { return information.Pairing.IsPaired; } }
+
+        public bool CanPair { get { return information.Pairing.CanPair; } }
+
         /// <summary>
         /// Update this objects device info
         /// </summary>
@@ -268,8 +290,29 @@ namespace Recreate.Hololens.BluetoothLE
         {
             information.Update(deviceInfoUpdate);
         }
-    }
 
+        public void Pair()
+        {
+            PairAsync();
+        }
+
+        private async void PairAsync()
+        {
+            // We must update the collection on the UI thread
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+            {
+                if (this.CanPair && !this.Pairing)
+                {
+                    DevicePairingResult res = await information.Pairing.PairAsync();
+                    if (res.Status == DevicePairingResultStatus.Paired)
+                    {
+                        OnDevicePaired?.Invoke(this);
+                    }
+                }
+            });
+        }
+    }
+        
 /// <summary>
 /// Wrapper Class Representing a Gatt Device
 /// </summary>
@@ -746,6 +789,8 @@ public class GattDevice
     public class GattInformation
     {
         public string Name { get; internal set; }
+        public string Pairing { get; internal set; }
+        public string CanPair { get; internal set; }
     }
 
     /// <summary>
